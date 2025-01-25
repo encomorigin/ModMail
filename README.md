@@ -1,28 +1,28 @@
-# Discord Modmail Bot
+# Encom Modmail Bot
 
-## Features
-- **Secure Server**: Anti-raid protection, role-based command restrictions.
-- **Modmail System**: Users can send requests via DM, staff can approve/reject with reactions (✅ & ❌).
-- **Content Filter**: Automatically deletes harmful content (nudity, malware, PDFs, hack videos, etc.).
-- **Rotating Status**: Bot status changes every 3 seconds.
-- **Multilingual**: Supports multiple languages with user preferences.
-- **Logging**: Modmail requests are logged with staff member and timestamp.
-- **Cooldown**: Limits how often users can send modmail requests to prevent spam.
+A Discord bot built using `discord.js` and `next.js` for handling modmail requests and providing server security. The bot also ensures the server is protected from harmful content (nudity, malware, PDFs, links, etc.) and allows only specific roles to handle modmail.
 
-## Installation
-1. Clone this repository.
-2. Run `npm install` to install dependencies.
-3. Create a `.env` file with your bot's token, server ID, and other configuration details.
-4. Run the bot with `node index.js`.
+## Features:
+- **Modmail System**: Members can send modmail via direct messages to the bot, which are then forwarded to a designated log channel.
+- **Role-based Access**: Only users with the roles `Founder`, `Maintainer`, `Team`, and `Moderator` can accept or reject modmail messages.
+- **Security**: Prevents users from sending harmful content like nudity, malware, hack PDFs, and dangerous links. Harmful content results in an automatic deletion and a 12-hour timeout for the user.
+- **Cooldown**: Users can only send modmail requests once every 3 hours to prevent spam.
+- **Bot Status**: The bot’s status is set to **idle** mode.
+- **Rotating Status**: Every 3 seconds, the bot’s status changes between "Watching Encom", "Playing with Encom", and "Helping Encom".
+- **Multilingual Support**: The bot can be configured to handle multiple languages. When a modmail request is sent, a translation option in English will be provided.
+- **User Notification**: After staff reacts to a modmail request (with ✅ or ❌), the user is notified via direct message.
 
-## Configuration (.env)
-- `DISCORD_TOKEN`: Your bot's token.
-- `GUILD_ID`: Your server ID.
-- `LOG_CHANNEL_ID`: Channel for logging modmail actions.
-- `MODMAIL_CHANNEL_ID`: Channel for receiving modmail requests.
-- `ANTI_RAID_CHANNEL_ID`: Optional anti-raid monitoring channel.
-- `COOLDOWN_TIME`: Cooldown duration in seconds for modmail requests.
-- `LANGUAGE_DEFAULT`: Default language for users.
+## Requirements:
+- **Node.js**: v16.0.0 or higher.
+- **Discord.js**: v14.0.0 or higher.
+- **dotenv**: For environment variable management.
 
-## License
-This bot is licensed under MIT.
+## Setup Instructions
+
+### 1. Install Dependencies
+To set up the bot, clone this repository and install the required dependencies:
+
+```bash
+git clone https://github.com/encomorigin/ModMail.git
+cd encom-mm
+npm install
