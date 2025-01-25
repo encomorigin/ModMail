@@ -1,12 +1,21 @@
 {
-  "name": "encom-mm",
+  "name": "ModMail",
   "version": "1.0.0",
-  "description": "Encom Modmail Bot",
+  "description": "A secure modmail bot for Discord with features like activity rotation and security measures.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.0.0"
-  }
+    "discord.js": "^14.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "license": "MIT",
+  "author": "sreeman",
+  "keywords": [
+    "discord",
+    "bot",
+    "modmail",
+    "security"
+  ]
 }
