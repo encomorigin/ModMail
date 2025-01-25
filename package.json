@@ -1,0 +1,39 @@
+{
+  "name": "ModMail",
+  "version": "1.0.0",
+  "description": "A Discord bot for handling modmail requests with security features",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "next": "^12.0.0",
+    "nodemon": "^2.0.15"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/encomorigin/ModMail.git"
+  },
+  "keywords": [
+    "discord",
+    "modmail",
+    "bot",
+    "security"
+  ],
+  "author": "sreeman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/encomorigin/ModMail/issues"
+  },
+  "homepage": "https://github.com/encomorigin/ModMail#readme"
+}
