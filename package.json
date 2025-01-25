@@ -1,21 +1,15 @@
 {
   "name": "ModMail",
   "version": "1.0.0",
-  "description": "A secure modmail bot for Discord with features like activity rotation and security measures.",
-  "main": "index.js",
+  "description": "A modmail bot for Discord that allows members to DM and select a language before sending their messages for review.",
+  "main": "bot.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node bot.js"
   },
   "dependencies": {
-    "discord.js": "^14.0.0",
-    "dotenv": "^16.0.0"
+    "discord.js": "^14.9.3",
+    "dotenv": "^16.0.3"
   },
-  "license": "MIT",
   "author": "sreeman",
-  "keywords": [
-    "discord",
-    "bot",
-    "modmail",
-    "security"
-  ]
+  "license": "MIT"
 }
