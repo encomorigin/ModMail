@@ -1,145 +1,170 @@
+require('dotenv').config();
 const { Client, Intents } = require('discord.js');
-const dotenv = require('dotenv');
-dotenv.config();
+const cooldowns = new Map();
+const COOLDOWN_TIME = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.MESSAGE_CONTENT] });
-
-// Data storage (this could be in a database, but for simplicity, we use an in-memory object)
-let warnings = {};
-let recentJoins = [];
-let recentMessages = [];
-let recentRoleChanges = [];
-const raidDetection = {
-    recentJoins: [],
-    recentMessages: [],
-    recentRoleChanges: [],
-    raidThreshold: 5, 
-    raidTimeWindow: 600000, 
-};
-
-const activities = [
-    "Watching Encom",
-    "Playing Encom",
-    "Helping Encom"
-];
-
-// Function to rotate the bot's status every 3 seconds
-let activityIndex = 0;
-setInterval(() => {
-    client.user.setActivity(activities[activityIndex], { type: 'WATCHING' });
-    activityIndex = (activityIndex + 1) % activities.length; // Rotate through activities
-}, 3000);
+// Create a new Discord client
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.MESSAGE_CONTENT] });
 
 client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-    client.user.setStatus('idle');
+  console.log(`Logged in as ${client.user.tag}!`);
+  
+  // Set bot status to "Watching Encom"
+  client.user.setPresence({ activities: [{ name: 'Watching Encom' }], status: 'idle' });
 });
 
-// Handle member joins
-client.on('guildMemberAdd', (member) => {
-    recentJoins.push(Date.now());
-    recentJoins = recentJoins.filter(timestamp => Date.now() - timestamp < raidDetection.raidTimeWindow);
+// Role IDs for access
+const ROLE_IDS = {
+  Founder: 'your-founder-role-id',
+  Maintainer: 'your-maintainer-role-id',
+  Team: 'your-team-role-id',
+  Moderator: 'your-moderator-role-id'
+};
 
-    if (recentJoins.length > raidDetection.raidThreshold) {
-        handleRaid('join');
-    }
-});
-
-// Handle message events to detect spamming
+// Handle incoming messages
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+  // Ignore messages from bots
+  if (message.author.bot) return;
 
-    // Anti-spam: Check if the message contains unwanted content
-    const restrictedLinks = ['youtube.com', 'facebook.com', 'instagram.com', 'discord.gg', '.pdf', '.exe', 'hack'];
-    if (restrictedLinks.some(link => message.content.includes(link) || message.attachments.size > 0)) {
-        await message.author.send('You have posted a restricted link/image. You will be timed out for 12 hours.');
-        await message.member.timeout(43200 * 1000); // Timeout for 12 hours
+  // Ignore messages that are not DMs (no pings or messages in public channels)
+  if (message.channel.type !== 'DM') {
+    return message.reply("Please send your issues via DM to this bot.");
+  }
+
+  // Check if the sender has permission to use the bot
+  if (!hasAccess(message.author)) {
+    return message.reply('You do not have permission to interact with this bot.');
+  }
+
+  // Handle only DMs
+  if (message.channel.type === 'DM') {
+    // Check if the sender has already sent a message recently (cooldown system)
+    if (isOnCooldown(message.author.id)) {
+      return message.reply('You can only send a message every 3 hours.');
     }
 
-    // Monitor messages for raid detection
-    recentMessages.push(Date.now());
-    recentMessages = recentMessages.filter(timestamp => Date.now() - timestamp < raidDetection.raidTimeWindow);
+    // Ask for language selection if it's their first message
+    let lang = await getLanguageSelection(message);
+    if (!lang) return;
 
-    if (recentMessages.length > raidDetection.raidThreshold) {
-        handleRaid('message');
-    }
+    // Log the message and set the cooldown
+    message.reply(`Thank you for your message! Team Encom will review it soon.`);
+    setCooldown(message.author.id);
 
-    // Command handling
-    if (message.content === '!help') {
-        return message.author.send('Please DM me for administrative server help');
-    }
+    // Send the message to a log channel for admins to review
+    const logChannel = client.channels.cache.get(process.env.LOG_CHANNEL_ID);
+    if (logChannel) {
+      const modmailMessage = await logChannel.send(`New modmail from ${message.author.tag} (${lang}): \n${message.content}`);
+      
+      // Add approval and rejection reactions to the modmail message
+      await modmailMessage.react('✅');
+      await modmailMessage.react('❌');
 
-    if (message.content === '!lockdown') {
-        await lockdownServer();
-    }
+      // Handle the reactions for approval/rejection
+      const filter = (reaction, user) => {
+        return [ '✅', '❌' ].includes(reaction.emoji.name) && hasAccess(user);
+      };
 
-    // Modmail system
-    if (message.content.startsWith('!modmail')) {
-        message.author.send('Please select your language: English, Telugu, Hindi, French, Russian, Arabic, German');
-        message.author.send('Now, please send your message for Team Encom.');
-
-        const modmailChannel = client.channels.cache.get(process.env.MODMAIL_CHANNEL_ID);
-        modmailChannel.send(`New modmail from ${message.author.tag}: ${message.content}`);
-
-        // Timeout logic
-        if (message.content.includes('!modmail')) {
-            await message.member.timeout(300000); // Timeout for 5 minutes
-            await message.author.send("Please don't misuse the commands, or you'll be banned.");
+      const collector = modmailMessage.createReactionCollector({ filter, time: 60000 });
+      
+      collector.on('collect', async (reaction, user) => {
+        if (reaction.emoji.name === '✅') {
+          await message.reply('Team Encom has accepted your request.');
+        } else if (reaction.emoji.name === '❌') {
+          await message.reply('Team Encom has rejected your request.');
         }
-    }
 
-    // Handle approval or rejection of messages (only for assigned roles)
-    const approvedReactions = ['✅', '❌'];
-    if (approvedReactions.includes(message.content)) {
-        const response = message.content === '✅' 
-            ? 'Your message was reviewed by Team Encom and accepted.' 
-            : 'Your message was reviewed by Team Encom and not accepted.';
-        await message.author.send(response);
+        // Log the action taken and the user who reacted
+        const actionTaken = reaction.emoji.name === '✅' ? 'Accepted' : 'Rejected';
+        const logAction = client.channels.cache.get(process.env.LOG_CHANNEL_ID);
+        logAction.send(`Modmail from ${message.author.tag} was ${actionTaken} by ${user.tag} at ${new Date().toLocaleString()}.`);
+      });
+    } else {
+      console.log('Log channel not found.');
     }
-
-    // Warning and ban system
-    if (warnings[message.author.id] && warnings[message.author.id] >= 3) {
-        await message.guild.members.ban(message.author.id, { reason: '3 warnings accumulated' });
-        await message.author.send('You have been banned for 3 days due to 3 warnings.');
-    }
+  }
 });
 
-// Handle role changes
-client.on('guildMemberUpdate', (oldMember, newMember) => {
-    if (oldMember.roles.cache.size !== newMember.roles.cache.size) {
-        recentRoleChanges.push(Date.now());
-        recentRoleChanges = recentRoleChanges.filter(timestamp => Date.now() - timestamp < raidDetection.raidTimeWindow);
-
-        if (recentRoleChanges.length > raidDetection.raidThreshold) {
-            handleRaid('role');
-        }
+// Check if user is on cooldown
+function isOnCooldown(userId) {
+  if (cooldowns.has(userId)) {
+    const expirationTime = cooldowns.get(userId);
+    if (Date.now() < expirationTime) {
+      return true;
     }
-});
-
-// Function to handle raid alerts
-async function handleRaid(type) {
-    const modmailChannel = client.channels.cache.get(process.env.MODMAIL_CHANNEL_ID);
-    if (modmailChannel) {
-        modmailChannel.send(`Raid detected through ${type} activity. Immediate action required!`);
-    }
-
-    const staffRole = process.env.FOUNDER_ROLE_ID; 
-    const staffMembers = modmailChannel.guild.members.cache.filter(member => member.roles.cache.has(staffRole));
-    staffMembers.forEach(staffMember => {
-        staffMember.send(`Raid attempt detected via ${type}. Please investigate immediately.`);
-    });
-
-    // Lockdown
-    await lockdownServer();
+    cooldowns.delete(userId); // Remove expired cooldown
+  }
+  return false;
 }
 
-// Lockdown function (e.g., disabling messaging and connecting)
-async function lockdownServer() {
-    const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    await guild.roles.everyone.setPermissions({
-        SEND_MESSAGES: false,
-        CONNECT: false,
-    });
+// Set cooldown for user
+function setCooldown(userId) {
+  cooldowns.set(userId, Date.now() + COOLDOWN_TIME);
 }
 
-client.login(process.env.DISCORD_TOKEN);
+// Ask user to select a language
+async function getLanguageSelection(message) {
+  const langEmbed = {
+    color: 0x0099ff,
+    title: 'Please select your preferred language',
+    description: 'React with the corresponding emoji to select your language.',
+    fields: [
+      { name: 'English', value: '🇬🇧' },
+      { name: 'Telugu', value: '🇮🇳' },
+      { name: 'Hindi', value: '🇮🇳' },
+      { name: 'French', value: '🇫🇷' },
+      { name: 'Russian', value: '🇷🇺' },
+      { name: 'Arabic', value: '🇸🇦' },
+      { name: 'German', value: '🇩🇪' },
+    ],
+  };
+
+  await message.reply({ embeds: [langEmbed] });
+
+  const filter = (reaction, user) => {
+    return user.id === message.author.id && ["🇬🇧", "🇮🇳", "🇫🇷", "🇷🇺", "🇸🇦", "🇩🇪"].includes(reaction.emoji.name);
+  };
+
+  // Wait for user to react
+  const collected = await message.awaitReactions({ filter, max: 1, time: 60000 });
+  const selectedLanguage = collected.first() ? collected.first().emoji.name : null;
+
+  if (!selectedLanguage) {
+    message.reply('You did not select a language in time. Please try again.');
+    return null;
+  }
+
+  // Return the selected language
+  switch (selectedLanguage) {
+    case '🇬🇧':
+      return 'English';
+    case '🇮🇳':
+      return 'Telugu/Hindi';
+    case '🇫🇷':
+      return 'French';
+    case '🇷🇺':
+      return 'Russian';
+    case '🇸🇦':
+      return 'Arabic';
+    case '🇩🇪':
+      return 'German';
+    default:
+      return 'English';
+  }
+}
+
+// Check if the user has permission to access the bot
+function hasAccess(user) {
+  // Check if the user has any of the allowed roles by their ID
+  const allowedRoleIds = Object.values(ROLE_IDS);
+  const guild = client.guilds.cache.get(process.env.GUILD_ID);
+  if (!guild) return false;
+  
+  const member = guild.members.cache.get(user.id);
+  if (!member) return false;
+
+  return member.roles.cache.some(role => allowedRoleIds.includes(role.id));
+}
+
+// Login to Discord with your app's token
+client.login(process.env.BOT_TOKEN);
