@@ -1,28 +1,26 @@
-# Encom Modmail Bot
+# Discord Modmail Bot
 
-A Discord bot built using `discord.js` and `next.js` for handling modmail requests and providing server security. The bot also ensures the server is protected from harmful content (nudity, malware, PDFs, links, etc.) and allows only specific roles to handle modmail.
+This bot provides a secure modmail system for your Discord server with features like:
 
-## Features:
-- **Modmail System**: Members can send modmail via direct messages to the bot, which are then forwarded to a designated log channel.
-- **Role-based Access**: Only users with the roles `Founder`, `Maintainer`, `Team`, and `Moderator` can accept or reject modmail messages.
-- **Security**: Prevents users from sending harmful content like nudity, malware, hack PDFs, and dangerous links. Harmful content results in an automatic deletion and a 12-hour timeout for the user.
-- **Cooldown**: Users can only send modmail requests once every 3 hours to prevent spam.
-- **Bot Status**: The bot’s status is set to **idle** mode.
-- **Rotating Status**: Every 3 seconds, the bot’s status changes between "Watching Encom", "Playing with Encom", and "Helping Encom".
-- **Multilingual Support**: The bot can be configured to handle multiple languages. When a modmail request is sent, a translation option in English will be provided.
-- **User Notification**: After staff reacts to a modmail request (with ✅ or ❌), the user is notified via direct message.
+- Role-based access (Founder, Maintainer, Team, Moderator).
+- Automatic handling of unwanted content (e.g., links, images related to hacks, nudity, etc.).
+- A rotating bot status that changes every 3 seconds.
+- Custom commands (`!help`, `!lockdown`) with specific behaviors.
+- Automated timeout and ban system for users with multiple infractions.
+- Server raid protection with quick lockdown functionality.
+- Modmail functionality for users to communicate with the server staff.
 
-## Requirements:
-- **Node.js**: v16.0.0 or higher.
-- **Discord.js**: v14.0.0 or higher.
-- **dotenv**: For environment variable management.
+## Features
+- **Idle status** with rotating activity messages.
+- **Security**: Timeouts for posting unwanted content.
+- **Role-based access** to modmail system.
+- **Command handling** for administrative commands.
+- **Raid detection** and **server lockdown**.
 
 ## Setup Instructions
 
-### 1. Install Dependencies
-To set up the bot, clone this repository and install the required dependencies:
+1. Clone this repository to your local machine:
 
 ```bash
 git clone https://github.com/encomorigin/ModMail.git
 cd encom-mm
-npm install
